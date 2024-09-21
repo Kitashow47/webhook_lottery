@@ -14,4 +14,4 @@ WORKDIR /var/www/html
 COPY public/ /var/www/html/
 
 # Apacheの設定ファイルを適用
-COPY ./000-default.conf /C:\Users\shoki\Desktop\lottery_pj\webhook_lottery/000-default.conf
+COPY ./000-default.conf /C:\Users\shoki\Desktop\lottery_pj\webhook_lottery\lottery_pj/000-default.conf
