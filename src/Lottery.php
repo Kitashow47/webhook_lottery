@@ -1,24 +1,17 @@
 <?php
-
 class Lottery {
-    private $db;
+    private $winningProbability;
 
-    public function __construct(Database $db) {
-        $this->db = $db;
+    public function __construct($winningProbability = 50) {
+        $this->winningProbability = $winningProbability;
     }
 
     public function draw() {
-        $probability = $this->getProbability();
-        $isWinner = mt_rand(1, 100) <= $probability;
-        
-        $result = $isWinner ? 'Win' : 'Lose';
-        $this->db->query('INSERT INTO results (result) VALUES (?)', [$result]);
-        
-        return $result;
-    }
-
-    private function getProbability() {
-        $result = $this->db->query('SELECT value FROM settings WHERE name = ?', ['winning_probability'])->fetch();
-        return $result ? (int)$result['value'] : 50;  // デフォルト50%
+        // 乱数生成で当選確率を判定
+        $randomNumber = mt_rand(1, 100);
+        if ($randomNumber <= $this->winningProbability) {
+            return 'Win';
+        }
+        return 'Lose';
     }
 }

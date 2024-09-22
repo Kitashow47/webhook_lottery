@@ -7,6 +7,8 @@ services:
       - "8080:80"
     volumes:
       - ./public:/var/www/html
+      - ./admin:/var/www/html/admin
+      - ./src:/var/www/html/src
     depends_on:
       - db
 
