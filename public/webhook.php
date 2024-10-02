@@ -1,30 +1,40 @@
 <?php
-session_start();  // セッションを開始
+session_start(); // セッションを開始して確率を取得
+
+// データベース接続設定
+$dsn = 'mysql:host=db;dbname=webhook_db;charset=utf8';
+$user = 'webhook_user';
+$password = 'webhookpassword';
+
+try {
+    $pdo = new PDO($dsn, $user, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die('データベース接続失敗: ' . $e->getMessage());
+}
+
+// 抽選確率をセッションから取得（デフォルト50%）
+$winningProbability = $_SESSION['winningProbability'] ?? 50;
+error_log("Current winning probability: $winningProbability"); // ログに出力
 
 // Webhookからデータを受け取る
 $input = file_get_contents('php://input');
 $data = json_decode($input, true);
 
-// デバッグ: Webhookの内容をログに出力
-file_put_contents('php://stderr', "webhook.php - Webhook payload: " . print_r($data, true) . "\n");
+// データが正しく受信された場合
+if (isset($data['transactionHeadIds']) && isset($data['action'])) {
+    // 確率に基づいて抽選結果を決定
+    $lotteryResult = (rand(1, 100) <= $winningProbability) ? 'あたり' : 'ハズレ'; 
 
-// "event"が"pos:transactions"の場合のみ処理を実行
-if ($data && isset($data['event']) && $data['event'] === 'pos:transactions') {
-    // 抽選を実行（50%の確率で当選）
-    $lotteryResult = rand(1, 100) <= 50 ? 'Win' : 'Lose';
-
-    // セッションに抽選結果を保存
-    $_SESSION['lotteryResult'] = $lotteryResult;
-
-    // デバッグ: セッションに保存された結果をログに出力
-    file_put_contents('php://stderr', "webhook.php - Lottery Result: " . $_SESSION['lotteryResult'] . "\n");
-
-    // Webhookのレスポンスとして結果をJSON形式で返す
-    echo json_encode([
-        'result' => $lotteryResult,
-        'contractId' => $data['contractId'],
-        'transactionHeadIds' => $data['transactionHeadIds']
+    // データベースに保存
+    $stmt = $pdo->prepare('INSERT INTO webhook_actions (action, transaction_id, lottery_result) VALUES (:action, :transaction_id, :lottery_result)');
+    $stmt->execute([
+        ':action' => $data['action'],
+        ':transaction_id' => $data['transactionHeadIds'][0],
+        ':lottery_result' => $lotteryResult
     ]);
+
+    echo json_encode(['status' => 'success']);
 } else {
-    echo json_encode(['error' => 'Invalid event or no data received']);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid data received']);
 }

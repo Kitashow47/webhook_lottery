@@ -1,13 +1,15 @@
 <?php
-// セッションIDをURLのパラメータから取得
-if (isset($_GET['sessionId'])) {
-    session_id($_GET['sessionId']);  // セッションIDをセット
+// データベース接続設定
+$dsn = 'mysql:host=db;dbname=webhook_db;charset=utf8';
+$user = 'webhook_user';
+$password = 'webhookpassword';
+
+try {
+    $pdo = new PDO($dsn, $user, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die('データベース接続失敗: ' . $e->getMessage());
 }
-
-session_start();  // セッションを開始
-
-// セッションから抽選結果を取得
-$result = $_SESSION['lotteryResult'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -20,38 +22,41 @@ $result = $_SESSION['lotteryResult'] ?? null;
         }
     </style>
     <script>
-        // セッションIDを保存する変数を用意
-        var sessionId = '<?php echo session_id(); ?>';  // PHPからセッションIDを渡す
+        let isDisplayingResult = false; // 結果表示中かどうかを管理
 
-        // Webhookの結果をポーリングして取得
-        function checkForWebhook() {
-            fetch('check_result.php?sessionId=' + sessionId)  // セッションIDを渡す
+        // データベースから新しい結果を取得するための関数
+        function checkForNewData() {
+            if (isDisplayingResult) return; // 結果表示中はチェックを停止
+
+            fetch('check_db.php')
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Fetched result:', data);  // デバッグ用に結果を出力
-                    if (data.result) {
+                    console.log('Fetched data:', data); // 取得したデータをログに表示
+                    if (data.action) {
                         // 結果があれば表示
+                        isDisplayingResult = true; // 結果表示中フラグを立てる
                         document.getElementById('waiting').style.display = 'none';
-                        document.getElementById('result').innerText = '抽選結果: ' + data.result;
+                        document.getElementById('result').innerText = '抽選結果: ' + data.lottery_result + ' (アクション: ' + data.action + ', トランザクションID: ' + data.transaction_id + ')';
                         document.getElementById('result').style.display = 'block';
 
-                        // 5秒後に待機中に戻る
+                        // 5秒後に待機中に戻す
                         setTimeout(function() {
                             document.getElementById('result').style.display = 'none';
                             document.getElementById('waiting').style.display = 'block';
+                            isDisplayingResult = false; // 結果表示終了後にフラグを解除
                         }, 5000);
                     }
                 })
-                .catch(error => console.error('Error fetching result:', error));  // エラーログを表示
-        }
+                .catch(error => console.error('Error:', error));
+        }  
 
-        // 2秒ごとに結果をチェックする
-        setInterval(checkForWebhook, 2000);
+        // 3秒ごとにデータベースをチェック
+        setInterval(checkForNewData, 3000);
     </script>
 </head>
 <body>
     <h1>抽選結果</h1>
     <div id="waiting">待機中...</div>
-    <div id="result"><?php echo $result ? '抽選結果: ' . $result : ''; ?></div>
+    <div id="result"></div>
 </body>
 </html>

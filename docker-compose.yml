@@ -13,16 +13,18 @@ services:
       - db
 
   db:
-    image: mysql:8.0
+    image: mysql:5.7
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: lottery
-      MYSQL_USER: user
-      MYSQL_PASSWORD: userpassword
-    ports:
-      - "3306:3306"
+      MYSQL_ROOT_PASSWORD: rootpassword         # MySQLのrootユーザーのパスワード
+      MYSQL_DATABASE: webhook_db                # 作成するデータベース名
+      MYSQL_USER: webhook_user                  # アクセスするユーザー名
+      MYSQL_PASSWORD: webhookpassword           # 上記ユーザーのパスワード
     volumes:
       - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d/
+      #- ./my.cnf:/etc/mysql/my.cnf  # my.cnfの絶対パス
+    ports:
+      - "3306:3306"
 
 volumes:
   db_data:
