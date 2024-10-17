@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public:/var/www/html
+      - ./admin:/var/www/html/admin
+      - ./src:/var/www/html/src
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword         # MySQLのrootユーザーのパスワード
+      MYSQL_DATABASE: webhook_db                # 作成するデータベース名
+      MYSQL_USER: webhook_user                  # アクセスするユーザー名
+      MYSQL_PASSWORD: webhookpassword           # 上記ユーザーのパスワード
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d/
+      #- ./my.cnf:/etc/mysql/my.cnf  # my.cnfの絶対パス
+    ports:
+      - "3306:3306"
+
+volumes:
+  db_data:
